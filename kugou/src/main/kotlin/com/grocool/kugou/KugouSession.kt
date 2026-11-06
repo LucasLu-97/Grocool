@@ -1,11 +1,14 @@
 package com.grocool.kugou
 
+import java.math.BigInteger
+import kotlin.random.Random
+
 /**
  * The mutable cookie/credential state one signed-in device carries, mirroring
  * the cookie names KuGouMusicApi's server.js passes around.
  *
  * The API surface deliberately keeps the internal `KUGOU_API_*` cookie names
- * (MID, GUID, DEV, WEBGL) because individual API modules reference them.
+ * (MID, GUID, DEV, MAC, WEBGL) because individual API modules reference them.
  */
 class KugouSession(initial: Map<String, String> = emptyMap()) {
 
@@ -23,19 +26,40 @@ class KugouSession(initial: Map<String, String> = emptyMap()) {
     /** KUGOU_API_GUID */
     var guid: String? = null
 
-    /** KUGOU_API_DEV */
+    /** KUGOU_API_DEV - 10-char uppercase device label (server.js default). */
     var dev: String? = null
 
-    /** KUGOU_API_WEBGL */
+    /** KUGOU_API_MAC - server.js default is the unmodifiable Android MAC. */
+    var mac: String? = null
+
+    /** KUGOU_API_WEBGL - a random uint64 decimal, Node branch of generateWebGLHash. */
     var webgl: String? = null
 
     var extra: MutableMap<String, String> = LinkedHashMap()
 
     init {
         updateFromCookies(initial.map { "${it.key}=${it.value}" })
+        ensureDeviceIdentity()
     }
 
     val isSignedIn: Boolean get() = !token.isNullOrBlank() && (userid ?: 0L) != 0L
+
+    /**
+     * server.js's ensureCookie middleware: fill in whatever device identity
+     * slot is still empty. Deterministic for restored sessions - a GUID
+     * already present keeps its derived MID.
+     */
+    fun ensureDeviceIdentity() {
+        if (guid.isNullOrBlank()) guid = DeviceIdentity.newGuid()
+        if (mid.isNullOrBlank()) mid = DeviceIdentity.calculateMid(guid!!)
+        if (dev.isNullOrBlank()) dev = DeviceIdentity.randomString(10).uppercase()
+        if (mac.isNullOrBlank()) mac = "02:00:00:00:00:00"
+        if (webgl.isNullOrBlank()) {
+            val bytes = ByteArray(8)
+            Random.nextBytes(bytes)
+            webgl = BigInteger(1, bytes).toString()
+        }
+    }
 
     /**
      * Merge "k=v" cookie strings from a response. Empty values are kept:
@@ -58,6 +82,7 @@ class KugouSession(initial: Map<String, String> = emptyMap()) {
                 "KUGOU_API_MID" -> mid = v
                 "KUGOU_API_GUID" -> guid = v
                 "KUGOU_API_DEV" -> dev = v
+                "KUGOU_API_MAC" -> mac = v
                 "KUGOU_API_WEBGL" -> webgl = v
                 else -> extra[k] = v
             }
@@ -76,6 +101,7 @@ class KugouSession(initial: Map<String, String> = emptyMap()) {
         mid?.let { put("KUGOU_API_MID", it) }
         guid?.let { put("KUGOU_API_GUID", it) }
         dev?.let { put("KUGOU_API_DEV", it) }
+        mac?.let { put("KUGOU_API_MAC", it) }
         webgl?.let { put("KUGOU_API_WEBGL", it) }
         putAll(extra)
     }
