@@ -180,8 +180,12 @@ internal fun buildQualityVip(
         val obtainable = freeListen ||
             (exists && !needVip && (relate!!.status ?: 0) != 0)
         val ogg = oggOf(quality, resource)
+        // JS `||` semantics: empty string and 0 are falsy and fall through to
+        // the relate_goods values; Kotlin `?:` alone only skips nulls.
+        val oggHash = ogg.hash?.takeIf { it.isNotBlank() }
+        val oggSize = ogg.size?.takeIf { it != 0L }
         val size = if (exists) {
-            ogg.size ?: relate!!.info?.filesize ?: 0L
+            oggSize ?: relate!!.info?.filesize ?: 0L
         } else 0L
         QualityItem(
             quality = quality,
@@ -189,9 +193,9 @@ internal fun buildQualityVip(
             level = relate?.level ?: 0,
             bitrate = relate?.info?.bitrate ?: 0,
             extname = if (exists) {
-                if (ogg.hash.isNullOrBlank()) relate!!.info?.extname ?: "" else "ogg"
+                if (oggHash != null) "ogg" else relate!!.info?.extname ?: ""
             } else "",
-            hash = if (exists) ogg.hash ?: relate!!.hash ?: "" else "",
+            hash = if (exists) oggHash ?: relate!!.hash ?: "" else "",
             size = size,
             sizeText = if (exists) formatSize(size) else "",
             privilege = relate?.privilege ?: -1,

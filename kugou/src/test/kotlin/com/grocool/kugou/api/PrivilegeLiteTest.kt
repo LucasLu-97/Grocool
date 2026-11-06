@@ -34,7 +34,10 @@ class PrivilegeLiteTest {
             isLite = true,
         )
         assertEquals(listOf("128", "320"), v.freeQualities)
-        assertEquals(listOf("flac"), v.vipQualities)
+        // superVipQualities is a *subset* of vipQualities on the JS side:
+        // every VIP-blocked tier lands in vipQualities, the suvip ones again
+        // in superVipQualities.
+        assertEquals(listOf("flac", "viper_atmos"), v.vipQualities)
         assertEquals(listOf("viper_atmos"), v.superVipQualities)
         assertEquals(listOf("high", "viper_tape", "viper_clear"), v.missingQualities)
         assertEquals("320", v.bestFreeQuality)
