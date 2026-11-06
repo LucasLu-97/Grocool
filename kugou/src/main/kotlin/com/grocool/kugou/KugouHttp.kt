@@ -160,26 +160,21 @@ class KugouClient(
             }
         }
 
-        var url = spec.baseURL.trimEnd('/') + spec.url
-        val openapicdn = spec.baseURL.contains("openapicdn")
-        if (openapicdn) {
-            val qs = params.entries.joinToString("&") { (k, v) ->
-                "${urlEncode(k)}=${urlEncode(stringifyForUrl(v))}"
-            }
-            if (qs.isNotEmpty()) url = "$url?$qs"
-        }
+        // The JS has an openapicdn branch that inlines params into the URL
+        // and lets axios encode them otherwise; the two produce the same wire
+        // format, so we build the query string once for everything.
+        val query = params.entries
+            .filter { it.value != null }
+            .joinToString("&") { (k, v) -> "${urlEncode(k)}=${urlEncode(stringifyForUrl(v))}" }
+        var fullUrl = spec.baseURL.trimEnd('/') + spec.url
+        if (query.isNotEmpty()) fullUrl = "$fullUrl?$query"
 
-        val response = http.request(url) {
+        val response = http.request(fullUrl) {
             method = HttpMethod.parse(spec.method.uppercase())
             requestHeaders.forEach { (k, v) -> header(k, v) }
             if (dataBytes != null) {
                 contentType(ContentType("application", "json").withParameter("charset", "utf-8"))
                 setBody(dataBytes)
-            }
-            if (!openapicdn) {
-                params.forEach { (k, v) ->
-                    if (v != null) url.parameters.append(k, stringifyForUrl(v))
-                }
             }
         }
 
@@ -205,7 +200,7 @@ class KugouClient(
             body = body,
             bodyBytes = bytes,
             cookies = cookies,
-            headers = response.headers.entries().associate { (k, v) -> k to v },
+            headers = response.headers.entries().associate { (k, v) -> k to v.joinToString(", ") },
             ssaCode = ssaCode,
         )
         session.updateFromCookies(cookies)
@@ -308,7 +303,7 @@ class KugouClient(
             body = body,
             bodyBytes = raw,
             cookies = cookies,
-            headers = response.headers.entries().associate { (k, v) -> k to v },
+            headers = response.headers.entries().associate { (k, v) -> k to v.joinToString(", ") },
         )
         session.updateFromCookies(cookies)
         return result
