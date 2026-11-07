@@ -127,6 +127,31 @@ enum class SourceKind(
         rank = 1,
     ),
 
+    /**
+     * KuGou Music Concept (酷狗概念版) — Grocool's core catalogue.
+     *
+     * Searched and streamed natively through the `:kugou` module: the v6
+     * combined search on the search side, and the authorized chain
+     * (user_verify -> song_auth -> /tracker/v5/url) on the stream side, which
+     * is what carries the Concept VIP entitlements — 320/flac unlock with a
+     * scanned-in VIP login, verified live during the Grocool smoke.
+     *
+     * rank -1 so it is tried before everything else, user-added addons
+     * included: it is the source this build exists for, and a track found in
+     * KuGou should play from KuGou rather than be matched onto YouTube.
+     * Not [USER_ADDED], so the sources screen treats it as a shipped source.
+     */
+    KUGOU(
+        label = "酷狗概念版",
+        detail = "Grocool 的核心曲库：概念版账号扫码登录后提供 320kbps 与无损 FLAC。VIP 音质" +
+            "通过播放授权链解锁。",
+        labels = listOf("FLAC", "Lossless", "概念版 VIP"),
+        needsServer = false,
+        canServeLossless = true,
+        worthPrefetching = true,
+        rank = -1,
+    ),
+
     JIOSAAVN(
         label = "JioSaavn",
         detail = "Optional JioSaavn streams up to 320kbps AAC/MP4. Catalogue matching can select the wrong song.",

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Default stays cleartext-free, matching the chassis' original
+  usesCleartextTraffic="false".
+
+  KuGou's own endpoints still answer plain HTTP for two calls the upstream
+  protocol hard-codes: login_by_token on login.user.kugou.com and the song
+  authorization exchange on gateway.kugou.com. Scoped to kugou.com so
+  nothing else the app talks to regresses to cleartext.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">kugou.com</domain>
+    </domain-config>
+</network-security-config>

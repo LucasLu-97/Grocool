@@ -261,6 +261,9 @@ val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>
 dependencies {
     implementation(project(":shared"))
     implementation(project(":sharedUi"))
+    // Grocool's KuGou Concept core: crypto/sign/request layer + API modules,
+    // pure JVM so the desktop targets can reuse it verbatim later.
+    implementation(project(":kugou"))
 
     // ---- Compose (Material 3) ----
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")

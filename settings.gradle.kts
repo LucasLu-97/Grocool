@@ -22,7 +22,7 @@ include(":kugou")
 
 // The Android module only when there is an SDK to build it against. A machine
 // set up for the desktop alone has none, and including it there fails at
-// configuration time - before the desktop module it has nothing to do with can
+// configuration time — before the desktop module it has nothing to do with can
 // build at all.
 // Read as a Properties file, not line by line: Android Studio writes the path
 // escaped (`C\:\Users\...` on Windows), and only Properties undoes that.
@@ -39,5 +39,5 @@ if (androidSdk != null && file(androidSdk).isDirectory) {
     include(":tv")
     include(":wearos")
 } else {
-    logger.lifecycle("No Android SDK found - building the desktop targets only.")
+    logger.lifecycle("No Android SDK found — building the desktop targets only.")
 }

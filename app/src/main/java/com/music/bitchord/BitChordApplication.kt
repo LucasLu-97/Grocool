@@ -112,6 +112,11 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // nothing that runs after startup can see any of them half open.
         val backgroundInit = thread(name = "startup-init") {
             SourceRegistry.init(this)
+            // KuGou Concept session restore, in its own encrypted store — the
+            // one file a data reset keeps. Before SourceRegistry serves a
+            // KUGOU source instance, since search/stream read it through
+            // KugouRuntime.clientOrNull().
+            com.grocool.kugou.runtime.KugouRuntime.init(this)
             AndroidStreamHooks.initInnerTubeX(this)
             // Its own directory: canvas clips are looping video, not audio, and
             // belong in a cache AudioCache's own limit and eviction policy were
