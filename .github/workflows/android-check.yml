@@ -32,10 +32,6 @@ jobs:
         run: |
           ./gradlew -q :app:dependencies --configuration prodDebugCompileClasspath 2>/dev/null | grep -A2 -- '--- project :kugou' | head -20 || echo "KUGOU NOT ON CLASSPATH"
 
-      - name: Dump kugou jar contents
-        run: |
-          ./gradlew -q :kugou:jar
-          unzip -l kugou/build/libs/kugou.jar | grep -E 'api/|KugouClient' | head -15
       - name: Assemble prod debug (no signing secrets needed)
         run: ./gradlew assembleProdDebug -Pbitchord.bundleWear=false
 
