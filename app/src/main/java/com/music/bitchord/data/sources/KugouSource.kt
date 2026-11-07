@@ -1,5 +1,6 @@
-package com.grocool.kugou.runtime
+package com.music.bitchord.data.sources
 
+import com.music.bitchord.data.kugou.KugouRuntime
 import com.grocool.kugou.api.songUrlAuthMerge
 import com.grocool.kugou.api.searchComplex
 import com.music.bitchord.data.TrackLog
@@ -15,7 +16,6 @@ import com.music.bitchord.data.sources.StreamRequest
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonPrimitive
 
 private const val TAG = "BitChord"
 
@@ -69,7 +69,7 @@ class KugouSource(
         val data = (response.body as? JsonObject)?.get("data") as? JsonObject
         val sections = data?.get("lists") as? JsonArray
         val songSection = sections?.firstOrNull { section ->
-            (section as? JsonObject)?.get("type")?.contentOrNullSafe() == "song"
+            ((section as? JsonObject)?.get("type") as? JsonPrimitive)?.contentOrNullSafe() == "song"
         }
         val songs = (songSection as? JsonObject)?.get("lists") as? JsonArray ?: return emptyList()
 
@@ -121,8 +121,8 @@ class KugouSource(
         val url = (((response.body as? JsonObject)?.get("url") as? JsonArray)
             ?.firstOrNull() as? JsonPrimitive)?.contentOrNullSafe()
             .takeUnless { it.isNullOrBlank() } ?: return null
-        val durationSec = (response.body as? JsonObject)?.get("timeLen")
-            ?.jsonPrimitive?.contentOrNullSafe()?.toIntOrNull()
+        val durationSec = (((response.body as? JsonObject)?.get("timeLen") as? JsonPrimitive))
+            ?.contentOrNullSafe()?.toIntOrNull()
 
         TrackLog.d(TAG, "✓ KuGou stream q=$quality ${url.take(80)}")
         return SourceStream(

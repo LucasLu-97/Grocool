@@ -116,7 +116,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             // one file a data reset keeps. Before SourceRegistry serves a
             // KUGOU source instance, since search/stream read it through
             // KugouRuntime.clientOrNull().
-            com.grocool.kugou.runtime.KugouRuntime.init(this)
+            com.music.bitchord.data.kugou.KugouRuntime.init(this)
             AndroidStreamHooks.initInnerTubeX(this)
             // Its own directory: canvas clips are looping video, not audio, and
             // belong in a cache AudioCache's own limit and eviction policy were

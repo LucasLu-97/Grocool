@@ -1,4 +1,4 @@
-package com.grocool.kugou.runtime
+package com.music.bitchord.data.kugou
 
 import android.content.Context
 import android.content.SharedPreferences
