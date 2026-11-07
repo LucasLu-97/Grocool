@@ -1,28 +1,26 @@
-// Grocool's pure-JVM Kotlin port of the KuGouMusicApi core.
-// Zero Android dependencies on purpose: the desktop targets reuse this
-// module verbatim later, and unit tests run on any JVM.
+// Grocool's Kotlin port of the KuGouMusicApi core.
+//
+// An android library, matching the tree's native module shape: the chassis'
+// other modules are all Android-flavoured (app/tv/wearos are AGP modules,
+// :shared/:sharedUi are KMP), and its AGP+Kotlin toolchain resolved a plain
+// Kotlin/JVM module's members as stubs (class names visible, signatures
+// gone - seen live across four CI rounds: an import of KugouClient type
+// checked, while entry.key on a Map from asCookieMap() did not). Sources and
+// tests keep the plain src/main(kotlin)/src/test(kotlin) layout the Kotlin
+// Android plugin expects. The real-backend smoke already served its purpose
+// from a portable JDK; its task is gone, the program stays as documentation.
 plugins {
-    id("org.jetbrains.kotlin.jvm")
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
-kotlin {
-    jvmToolchain(17)
-}
+android {
+    namespace = "com.grocool.kugou"
+    compileSdk = 37
 
-// AGP consumes library projects asking for TargetJvmEnvironment=android; a
-// plain Kotlin/JVM module publishes standard-jvm, and the Android compile
-// classpath silently resolves to nothing under it (the chassis' other modules
-// are all KMP, whose plugin chain handles this automatically — this is the
-// first pure-JVM module in the tree). Declaring android keeps the AGP side
-// matching; JVM consumers are unaffected because they don't request the
-// attribute strictly.
-configurations.configureEach {
-    attributes {
-        attribute(
-            org.gradle.api.attributes.java.TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
-            objects.named<org.gradle.api.attributes.java.TargetJvmEnvironment>(org.gradle.api.attributes.java.TargetJvmEnvironment.ANDROID),
-        )
+    defaultConfig {
+        minSdk = 26
     }
 }
 
@@ -40,20 +38,7 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
-/**
- * Interactive end-to-end smoke against the real KuGou Concept backend:
- * registerDevice -> QR login -> token refresh -> search -> privilege -> stream
- * -> KRC lyrics. Not wired into any CI gate; run locally with :kugou:smoke.
- */
-tasks.register<JavaExec>("smoke") {
-    group = "verification"
-    description = "Real-backend smoke: device register, QR login, play URL chain"
-    mainClass.set("com.grocool.kugou.smoke.SmokeKt")
-    classpath = sourceSets["main"].runtimeClasspath
-    standardInput = System.`in`
-}
-
-/** Prints the runtime classpath so the smoke can also run as a bare `java -cp`. */
+/** Prints the runtime classpath for local tooling. */
 tasks.register("printClasspath") {
-    doLast { println(sourceSets["main"].runtimeClasspath.asPath) }
+    doLast { println(android.sourceSets["main"].runtimeClasspath.asPath) }
 }
