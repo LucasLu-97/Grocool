@@ -37,8 +37,8 @@ jobs:
         run: |
           ./gradlew -q :app:dependencies --configuration prodDebugCompileClasspath 2>/dev/null | grep -A2 -- '--- project :kugou' | head -20 || echo "KUGOU NOT ON CLASSPATH"
 
-      - name: Assemble prod debug (no signing secrets needed)
-        run: ./gradlew assembleProdDebug -Pbitchord.bundleWear=false
+      - name: Assemble prod debug + unit tests (no signing secrets needed)
+        run: ./gradlew assembleProdDebug :app:testProdDebugUnitTest -Pbitchord.bundleWear=false
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
