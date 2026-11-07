@@ -121,6 +121,8 @@ fun SourcesScreen(
     onEditSmb: () -> Unit,
     /** Opens the full-window warning before JioSaavn is opted into. */
     onConfirmJioSaavn: () -> Unit,
+    /** Opens the KuGou Concept QR login dialog. */
+    onLoginKugou: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -243,7 +245,13 @@ fun SourcesScreen(
                         // Anything the user configured is theirs to edit or
                         // delete. JioSaavn and YouTube have no address to
                         // change, so a tap on them would open an empty editor.
-                        onClick = if (config.kind.needsServer) ({ onEditSource(config) }) else null,
+                        // KuGou's row opens the QR login: the one interaction
+                        // the account has, and the one that turns its streams on.
+                        onClick = when {
+                            config.kind.needsServer -> ({ onEditSource(config) })
+                            config.kind == SourceKind.KUGOU -> ({ onLoginKugou() })
+                            else -> null
+                        },
                         // YouTube gets no switch at all — see
                         // [SourceRegistry.setEnabled] for why one would be a lie.
                         onToggle = if (config.kind == SourceKind.YOUTUBE) {

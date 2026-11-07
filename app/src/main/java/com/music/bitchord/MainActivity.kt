@@ -641,6 +641,9 @@ private fun BitChordApp(
     // and the mini player, like every other alert in the app.
     var editingSource by remember { mutableStateOf<SourceConfig?>(null) }
     var confirmJioSaavn by remember { mutableStateOf(false) }
+    // KuGou Concept: the QR login dialog, hosted here like every other alert
+    // so its scrim covers the tab bar and the mini player.
+    var showKugouLogin by remember { mutableStateOf(false) }
     var confirmBitPerfect by remember { mutableStateOf<BitPerfectMode?>(null) }
     var confirmFixedVolume by remember { mutableStateOf(false) }
     /** An addon search row tapped while the quality setting skips its addon; see [AddonBlockedAlert]. */
@@ -3017,6 +3020,7 @@ private fun BitChordApp(
                                 onEditWebDav = { showWebDavEditor = true },
                                 onEditSmb = { showSmbEditor = true },
                                 onConfirmJioSaavn = { confirmJioSaavn = true },
+                                onLoginKugou = { showKugouLogin = true },
                             )
                         } else if (pageRoute == AppRoute.Downloads) {
                             DownloadManagerPage(
@@ -5792,6 +5796,14 @@ private fun BitChordApp(
                     confirmJioSaavn = false
                 },
                 onDismiss = { confirmJioSaavn = false },
+            )
+        }
+
+        if (showKugouLogin) {
+            val kugouLoginManager = remember { com.music.bitchord.data.kugou.KugouLoginManager() }
+            com.music.bitchord.ui.screens.KugouLoginDialog(
+                manager = kugouLoginManager,
+                onDismiss = { showKugouLogin = false },
             )
         }
 
