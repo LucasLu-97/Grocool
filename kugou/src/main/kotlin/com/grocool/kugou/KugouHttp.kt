@@ -1,7 +1,6 @@
 package com.grocool.kugou
 
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.header
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
@@ -311,6 +310,14 @@ class KugouClient(
 
     fun close() = http.close()
 
+    /**
+     * Same session and HTTP engine under another platform dialect. Used where
+     * an endpoint speaks MAIN even for Concept accounts (login_by_token -
+     * see KGAutoCheckin's proven recipe).
+     */
+    fun withPlatform(platform: KugouPlatform): KugouClient =
+        KugouClient(config.copy(platform = platform), session, http)
+
     private fun jsonElementOfMap(map: Map<*, *>): JsonElement = kotlinx.serialization.json.JsonObject(
         map.entries.associate { (k, v) ->
             k.toString() to when (v) {
@@ -346,9 +353,18 @@ class KugouClient(
         else -> value.toString()
     }
 
-    /** axios-style form encoding, with %20 for spaces instead of '+'. */
+    /**
+     * axios's default paramsSerializer, faithfully: `encodeURIComponent`
+     * with %20 -> '+' and `:` `$` `,` `[` `]` left bare. Encoding the comma in
+     * ppage_id broke the v5 stream endpoint's signature check (err 20006).
+     */
     private fun urlEncode(value: String): String =
-        URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+        URLEncoder.encode(value, "UTF-8") // space -> '+' already
+            .replace("%2C", ",")
+            .replace("%3A", ":")
+            .replace("%24", "$")
+            .replace("%5B", "[")
+            .replace("%5D", "]")
 
     /** util.js `parseCookieString` - strip Domain/path/expires/HttpOnly. */
     private fun parseCookieString(raw: String): String =
@@ -356,7 +372,7 @@ class KugouClient(
             .replace(";HttpOnly", "")
 
     companion object {
-        fun defaultHttpClient(): HttpClient = HttpClient(CIO) {
+        fun defaultHttpClient(): HttpClient = HttpClient(io.ktor.client.engine.okhttp.OkHttp) {
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 30_000
             }

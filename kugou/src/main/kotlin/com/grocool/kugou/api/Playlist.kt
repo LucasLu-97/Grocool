@@ -23,7 +23,7 @@ suspend fun KugouClient.userPlaylists(
             url = "/v7/get_all_list",
             method = "POST",
             data = mapOf(
-                "userid" to userid,
+                "userid" to userid.toString(),
                 "token" to token,
                 "total_ver" to 979,
                 "type" to 2,
@@ -32,7 +32,7 @@ suspend fun KugouClient.userPlaylists(
             ),
             params = mapOf(
                 "plat" to 1,
-                "userid" to userid,
+                "userid" to userid.toString(),
                 "token" to token,
             ),
             encryptType = EncryptType.ANDROID,
@@ -73,7 +73,7 @@ suspend fun KugouClient.playlistTrackAll(
             method = "POST",
             data = mapOf(
                 "listid" to listid,
-                "userid" to userid,
+                "userid" to userid.toString(),
                 "type" to type,
                 "page" to page,
                 "pagesize" to pagesize,

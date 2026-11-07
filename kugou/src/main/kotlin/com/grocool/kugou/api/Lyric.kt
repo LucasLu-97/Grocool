@@ -18,26 +18,33 @@ import java.util.Base64
 suspend fun KugouClient.searchLyric(
     hash: String? = null,
     keywords: String? = null,
-    duration: Int = 0,
-    albumAudioId: Long? = null,
+    durationMs: Long = 0,
 ): KugouResponse = request(
     RequestSpec(
         url = "/v1/search",
         method = "GET",
         baseURL = "https://lyrics.kugou.com",
+        // The `man=no` + appid shape from the JS upstream returns an empty
+        // body; the public `man=yes&client=pc` form is what the BitChord
+        // chassis' own KuGou lyric source ships with and is verified live.
         params = buildMap {
-            put("album_audio_id", albumAudioId ?: 0)
-            put("appid", 1005)
-            put("clientver", 20489)
-            put("duration", duration)
-            put("hash", hash ?: "")
-            put("keyword", keywords ?: "")
-            put("lrctxt", 1)
-            put("man", "no")
+            put("ver", 1)
+            put("man", "yes")
+            put("client", "pc")
+            hash?.takeIf { it.isNotBlank() }?.let { put("hash", it) }
+            keywords?.takeIf { it.isNotBlank() }?.let { put("keyword", it) }
+            if (durationMs > 0) put("duration", durationMs)
         },
         encryptType = EncryptType.ANDROID,
         clearDefaultParams = true,
         notSignature = true,
+        // The lyric host serves empty bodies to requests carrying the app
+        // identity headers; BitChord's lyric source sends them bare. A plain
+        // browser UA keeps the WAF happy where a headerless JVM client does not.
+        clearDefaultHeaders = true,
+        headers = mapOf(
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+        ),
     ),
 )
 
