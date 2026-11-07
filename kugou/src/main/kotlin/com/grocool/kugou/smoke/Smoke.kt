@@ -15,6 +15,7 @@ import com.grocool.kugou.api.searchComplex
 import com.grocool.kugou.api.searchLyric
 import com.grocool.kugou.api.songUrlNew
 import com.grocool.kugou.api.songUrlV5
+import com.grocool.kugou.api.songUrlAuthMerge
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonArray
@@ -137,16 +138,12 @@ fun main() = runBlocking {
             println("  ${q.quality}: exists=${q.exists} obtainable=${q.obtainable} size=${q.sizeText} ${q.extname}")
         }
 
-        println("=== [7/8] stream experiments ===")
-        println("-- v5 song_url signed (quality=128) --")
-        val v5 = runCatching { client.songUrlV5(hash, quality = "128", albumId = albumId, albumAudioId = albumAudioId) }
-        println(v5.getOrNull()?.body?.toString()?.take(900) ?: "v5 threw: ${v5.exceptionOrNull()?.message}")
-        println("-- v6 priv_url, resource WITHOUT album_audio_id --")
-        val v6a = runCatching { client.songUrlNew(hash, null) }
-        println(v6a.getOrNull()?.body?.toString()?.take(900) ?: "v6a threw: ${v6a.exceptionOrNull()?.message}")
-        println("-- v6 priv_url, string album_audio_id --")
-        val v6b = runCatching { client.songUrlNew(hash, albumAudioId) }
-        println(v6b.getOrNull()?.body?.toString()?.take(900) ?: "v6b threw: ${v6b.exceptionOrNull()?.message}")
+        println("=== [7/8] AUTH stream chain (EchoMusic path) ===")
+        for (q in listOf("128", "320", "flac")) {
+            println("-- auth chain quality=$q --")
+            val r = runCatching { client.songUrlAuthMerge(hash, q, albumId, albumAudioId) }
+            println(r.getOrNull()?.body?.toString()?.take(700) ?: "threw: ${r.exceptionOrNull()?.message}")
+        }
 
         println("=== [8/8] KRC lyric ===")
         val lowerHash = hash.trim().lowercase()

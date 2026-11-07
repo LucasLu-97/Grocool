@@ -6,6 +6,10 @@ import com.grocool.kugou.KugouConfig
 import com.grocool.kugou.KugouCrypto
 import com.grocool.kugou.KugouResponse
 import com.grocool.kugou.RequestSpec
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * `module/song_url_new.js` - the v6 priv_url playback link request.
@@ -145,4 +149,123 @@ suspend fun KugouClient.songUrlV5(
             // so the signature field is now required - send it.
         ),
     )
+}
+
+// ---------------------------------------------------------------------------
+// The authorized stream chain - EchoMusic's proven path (its backend is the
+// same KuGouMusicApi): user_verify hands out the playback authorization that
+// carries this account's Concept VIP entitlements, song_auth exchanges it for
+// per-track auth + open_time, and /tracker/v5/url (need_ogg=1, key-only
+// signing, clientver 11561) resolves the actual URL. This - not vip_token -
+// is how Concept VIP quality tiers (320/flac/hi-res) unlock.
+// ---------------------------------------------------------------------------
+
+/** `module/user_verify.js` - the account-level playback authorization. */
+suspend fun KugouClient.userVerify(): KugouResponse = request(
+    RequestSpec(
+        url = "/v1/user_verify",
+        method = "GET",
+        params = mapOf("module_id" to 51),
+        encryptType = EncryptType.ANDROID,
+        headers = mapOf("x-router" to "trackercdngz.kugou.com"),
+    ),
+)
+
+/** `module/song_auth.js` - per-track auth + open_time (preview window). */
+suspend fun KugouClient.songAuth(
+    hash: String,
+    albumAudioId: Long?,
+    authorization: String,
+): KugouResponse = request(
+    RequestSpec(
+        url = "/v1/authorization",
+        method = "GET",
+        baseURL = "http://gateway.kugou.com",
+        params = mapOf(
+            "authorization" to authorization,
+            "module_id" to 51,
+            "album_audio_id" to (albumAudioId ?: 0),
+            "clientver" to 11561,
+            "hash" to hash.trim().lowercase(),
+        ),
+        encryptType = EncryptType.ANDROID,
+        headers = mapOf("x-router" to "trackercdngz.kugou.com"),
+    ),
+)
+
+/** `module/song_url_auth.js` - the authed v5: /tracker/v5/url, ogg ladder. */
+suspend fun KugouClient.songUrlAuth(
+    hash: String,
+    quality: String = "128",
+    albumId: Long? = null,
+    albumAudioId: Long? = null,
+    authorization: String? = null,
+    openTime: Any? = null,
+    ppageId: String? = null,
+): KugouResponse {
+    session.ensureDeviceIdentity()
+    val magic = listOf("piano", "acappella", "subwoofer", "ancient", "dj", "surnay")
+    val q = if (quality in magic) "magic_$quality" else quality
+
+    val params = LinkedHashMap<String, Any>()
+    params["album_id"] = albumId ?: 0
+    params["area_code"] = 1
+    params["module"] = ""
+    params["hash"] = hash.trim().lowercase()
+    params["need_m"] = 0
+    params["ssa_flag"] = "is_fromtrack"
+    params["version"] = 11430
+    params["open_time"] = openTime ?: 0
+    params["ptype"] = 0
+    params["need_ogg"] = 1
+    params["page_id"] = if (config.isLite) 967177915 else 151369488
+    params["auth"] = authorization ?: ""
+    params["mtype"] = 0
+    params["quality"] = q.ifBlank { "128" }
+    params["album_audio_id"] = albumAudioId ?: 0
+    params["behavior"] = "play"
+    params["pid"] = if (config.isLite) 411 else 2
+    params["module_id"] = 51
+    params["cmd"] = 26
+    params["ppage_id"] = ppageId ?: if (config.isLite) {
+        "356753938,823673182,967485191"
+    } else {
+        "463467626,350369493,788954147"
+    }
+    params["clientver"] = 11561
+    params["pidversion"] = 3001
+    params["cdnBackup"] = 1
+
+    return request(
+        RequestSpec(
+            url = "/tracker/v5/url",
+            method = "GET",
+            params = params,
+            encryptType = EncryptType.ANDROID,
+            encryptKey = true,
+            // Upstream says notSign here, but the server enforces the
+            // signature field on every tracker stream route now (same 20006
+            // "err signature" as /v5/url before it) - verified in smoke.
+        ),
+    )
+}
+
+/**
+ * The full EchoMusic getSongUrl chain in one call:
+ * user_verify -> song_auth -> authorized /tracker/v5/url.
+ */
+suspend fun KugouClient.songUrlAuthMerge(
+    hash: String,
+    quality: String = "128",
+    albumId: Long? = null,
+    albumAudioId: Long? = null,
+): KugouResponse {
+    val verify = userVerify()
+    val auth = ((verify.body as? JsonObject)?.get("data") as? JsonObject)
+        ?.get("auth")?.jsonPrimitive?.content.orEmpty()
+    val sa = songAuth(hash, albumAudioId, auth)
+    val data = ((sa.body as? JsonObject)?.get("data") as? JsonObject)
+    val trackAuth = data?.get("auth")?.jsonPrimitive?.content ?: auth
+    val openTime = data?.get("open_time") ?: JsonPrimitive(0)
+    return songUrlAuth(hash, quality, albumId, albumAudioId, trackAuth, openTime)
 }
