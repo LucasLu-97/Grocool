@@ -1,8 +1,7 @@
 package com.music.bitchord.data.sources
 
+import com.grocool.kugou.KugouApi
 import com.music.bitchord.data.kugou.KugouRuntime
-import com.grocool.kugou.api.songUrlAuthMerge
-import com.grocool.kugou.api.searchComplex
 import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.sources.MusicSource
@@ -63,7 +62,7 @@ class KugouSource(
     ): List<Song> {
         val client = KugouRuntime.clientOrNull() ?: return emptyList()
         val response = runCatching {
-            client.searchComplex(query, pagesize = limit.coerceIn(1, 50)).ensureOk()
+            KugouApi.search(client, query, pagesize = limit.coerceIn(1, 50)).ensureOk()
         }.getOrNull() ?: return emptyList()
 
         val data = (response.body as? JsonObject)?.get("data") as? JsonObject
@@ -115,7 +114,7 @@ class KugouSource(
         }
 
         val response = runCatching {
-            client.songUrlAuthMerge(hash, quality, albumAudioId = albumAudioId).ensureOk()
+            KugouApi.streamUrl(client, hash, quality, albumAudioId = albumAudioId).ensureOk()
         }.getOrNull() ?: return null
 
         val url = (((response.body as? JsonObject)?.get("url") as? JsonArray)

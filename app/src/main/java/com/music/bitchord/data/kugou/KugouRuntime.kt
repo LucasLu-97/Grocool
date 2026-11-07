@@ -45,7 +45,7 @@ object KugouRuntime {
     fun persist() {
         val c = client ?: return
         val store = prefs ?: return
-        val snapshot = c.session.asCookieMap().entries.joinToString("\n") { "${it.key}=${it.value}" }
+        val snapshot = c.session.asCookieMap().entries.joinToString("\n") { entry -> "${entry.key}=${entry.value}" }
         store.edit().putString(KEY_SESSION, snapshot).apply()
     }
 
