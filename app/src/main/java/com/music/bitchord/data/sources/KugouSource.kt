@@ -1,6 +1,5 @@
 package com.music.bitchord.data.sources
 
-import com.grocool.kugou.KugouApi
 import com.music.bitchord.data.kugou.KugouRuntime
 import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.model.Song
@@ -60,9 +59,8 @@ class KugouSource(
         waitForAll: Boolean,
         request: StreamRequest?,
     ): List<Song> {
-        val client = KugouRuntime.clientOrNull() ?: return emptyList()
         val response = runCatching {
-            KugouApi.search(client, query, pagesize = limit.coerceIn(1, 50)).ensureOk()
+            KugouRuntime.search(query, limit.coerceIn(1, 50))?.ensureOk()
         }.getOrNull() ?: return emptyList()
 
         val data = (response.body as? JsonObject)?.get("data") as? JsonObject
@@ -98,7 +96,6 @@ class KugouSource(
         trackId: String,
         request: StreamRequest,
     ): SourceStream? {
-        val client = KugouRuntime.clientOrNull() ?: return null
         val parts = trackId.split('|', limit = 2)
         val hash = parts.getOrNull(0)?.takeIf { it.isNotBlank() } ?: return null
         val albumAudioId = parts.getOrNull(1)?.toLongOrNull()
@@ -113,9 +110,8 @@ class KugouSource(
             }
         }
 
-        val response = runCatching {
-            KugouApi.streamUrl(client, hash, quality, albumAudioId = albumAudioId).ensureOk()
-        }.getOrNull() ?: return null
+        val response = KugouRuntime.streamUrl(hash, quality, albumId = null, albumAudioId = albumAudioId)
+            ?.ensureOk() ?: return null
 
         val url = (((response.body as? JsonObject)?.get("url") as? JsonArray)
             ?.firstOrNull() as? JsonPrimitive)?.contentOrNullSafe()
