@@ -1,7 +1,9 @@
 package com.music.bitchord.data.sources
 
-import com.music.bitchord.data.kugou.KugouRuntime
+import com.grocool.kugou.api.searchComplex
+import com.grocool.kugou.api.songUrlAuthMerge
 import com.music.bitchord.data.TrackLog
+import com.music.bitchord.data.kugou.KugouRuntime
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.sources.MusicSource
 import com.music.bitchord.data.sources.SourceConfig
@@ -59,14 +61,15 @@ class KugouSource(
         waitForAll: Boolean,
         request: StreamRequest?,
     ): List<Song> {
+        val client = KugouRuntime.clientOrNull() ?: return emptyList()
         val response = runCatching {
-            KugouRuntime.search(query, limit.coerceIn(1, 50))?.ensureOk()
+            client.searchComplex(query, pagesize = limit.coerceIn(1, 50)).ensureOk()
         }.getOrNull() ?: return emptyList()
 
         val data = (response.body as? JsonObject)?.get("data") as? JsonObject
         val sections = data?.get("lists") as? JsonArray
         val songSection = sections?.firstOrNull { section ->
-            ((section as? JsonObject)?.get("type") as? JsonPrimitive)?.contentOrNullSafe() == "song"
+            ((section as? JsonObject)?.get("type") as? JsonPrimitive)?.content() == "song"
         }
         val songs = (songSection as? JsonObject)?.get("lists") as? JsonArray ?: return emptyList()
 
@@ -96,6 +99,7 @@ class KugouSource(
         trackId: String,
         request: StreamRequest,
     ): SourceStream? {
+        val client = KugouRuntime.clientOrNull() ?: return null
         val parts = trackId.split('|', limit = 2)
         val hash = parts.getOrNull(0)?.takeIf { it.isNotBlank() } ?: return null
         val albumAudioId = parts.getOrNull(1)?.toLongOrNull()
@@ -110,14 +114,15 @@ class KugouSource(
             }
         }
 
-        val response = KugouRuntime.streamUrl(hash, quality, albumId = null, albumAudioId = albumAudioId)
-            ?.ensureOk() ?: return null
+        val response = runCatching {
+            client.songUrlAuthMerge(hash, quality, albumAudioId = albumAudioId).ensureOk()
+        }.getOrNull() ?: return null
 
         val url = (((response.body as? JsonObject)?.get("url") as? JsonArray)
-            ?.firstOrNull() as? JsonPrimitive)?.contentOrNullSafe()
+            ?.firstOrNull() as? JsonPrimitive)?.content()
             .takeUnless { it.isNullOrBlank() } ?: return null
-        val durationSec = (((response.body as? JsonObject)?.get("timeLen") as? JsonPrimitive))
-            ?.contentOrNullSafe()?.toIntOrNull()
+        val durationSec = ((response.body as? JsonObject)?.get("timeLen") as? JsonPrimitive)
+            ?.content()?.toIntOrNull()
 
         TrackLog.d(TAG, "✓ KuGou stream q=$quality ${url.take(80)}")
         return SourceStream(
@@ -135,9 +140,6 @@ class KugouSource(
     private fun JsonObject.str(vararg names: String): String? = names.firstNotNullOfOrNull { n ->
         (get(n) as? JsonPrimitive)?.let { runCatching { it.content }.getOrNull() }
     }
-
-    private fun JsonPrimitive?.contentOrNullSafe(): String? =
-        runCatching { this?.content }.getOrNull()
 
     /** KuGou filenames arrive as "artist - title". */
     private fun splitArtistTitle(raw: String): Pair<String, String> {

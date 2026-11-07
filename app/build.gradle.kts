@@ -261,9 +261,6 @@ val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>
 dependencies {
     implementation(project(":shared"))
     implementation(project(":sharedUi"))
-    // Grocool's KuGou Concept core: crypto/sign/request layer + API modules,
-    // pure JVM so the desktop targets can reuse it verbatim later.
-    implementation(project(":kugou"))
 
     // ---- Compose (Material 3) ----
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
@@ -433,6 +430,8 @@ dependencies {
     implementation("org.bouncycastle:bcpkix-jdk18on:1.85")
 
     testImplementation("junit:junit:4.13.2")
+    // Kotlin test facade for the KuGou module tests living in this module.
+    testImplementation(kotlin("test"))
     // A real HTTP server for the addon tests. The addon protocol is entirely
     // "what does this app send, and what does it do with what comes back", and
     // a hand-rolled fake of the client would be a test of the fake. Pinned to
