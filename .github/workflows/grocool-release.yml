@@ -52,10 +52,10 @@ jobs:
           IS_PRE: ${{ inputs.prerelease }}
         run: |
           cd app/build/outputs/apk/prod/release/
-          mv app-prod-arm64-v8a-release.apk "Grocool-$TAG_arm64-v8a.apk"
-          mv app-prod-armeabi-v7a-release.apk "Grocool-$TAG_armeabi-v7a.apk"
-          mv app-prod-x86_64-release.apk "Grocool-$TAG_x86_64.apk"
-          mv app-prod-universal-release.apk "Grocool-$TAG_universal.apk"
+          mv app-prod-arm64-v8a-release.apk "Grocool-${TAG}_arm64-v8a.apk"
+          mv app-prod-armeabi-v7a-release.apk "Grocool-${TAG}_armeabi-v7a.apk"
+          mv app-prod-x86_64-release.apk "Grocool-${TAG}_x86_64.apk"
+          mv app-prod-universal-release.apk "Grocool-${TAG}_universal.apk"
           PRE_FLAG=""
           if [ "$IS_PRE" = "true" ]; then PRE_FLAG="--prerelease"; fi
           # A re-run with the same tag replaces the release cleanly.
@@ -87,10 +87,10 @@ jobs:
             --title "Grocool $TAG（测试版）" \
             --notes "$NOTES" \
             $PRE_FLAG \
-            "Grocool-$TAG_arm64-v8a.apk" \
-            "Grocool-$TAG_armeabi-v7a.apk" \
-            "Grocool-$TAG_x86_64.apk" \
-            "Grocool-$TAG_universal.apk"
+            "Grocool-${TAG}_arm64-v8a.apk" \
+            "Grocool-${TAG}_armeabi-v7a.apk" \
+            "Grocool-${TAG}_x86_64.apk" \
+            "Grocool-${TAG}_universal.apk"
 
       - name: Generate SHA-256 checksums
         env:
