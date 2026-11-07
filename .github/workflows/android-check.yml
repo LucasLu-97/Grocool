@@ -28,6 +28,10 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Diagnose kugou on the app compile classpath
+        run: |
+          ./gradlew -q :app:dependencies --configuration prodDebugCompileClasspath 2>/dev/null | grep -A2 -- '--- project :kugou' | head -20 || echo "KUGOU NOT ON CLASSPATH"
+
       - name: Assemble prod debug (no signing secrets needed)
         run: ./gradlew assembleProdDebug -Pbitchord.bundleWear=false
 
