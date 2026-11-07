@@ -10,11 +10,27 @@ kotlin {
     jvmToolchain(17)
 }
 
+// AGP consumes library projects asking for TargetJvmEnvironment=android; a
+// plain Kotlin/JVM module publishes standard-jvm, and the Android compile
+// classpath silently resolves to nothing under it (the chassis' other modules
+// are all KMP, whose plugin chain handles this automatically — this is the
+// first pure-JVM module in the tree). Declaring android keeps the AGP side
+// matching; JVM consumers are unaffected because they don't request the
+// attribute strictly.
+configurations.configureEach {
+    attributes {
+        attribute(
+            org.gradle.api.attributes.java.TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
+            objects.named<org.gradle.api.attributes.java.TargetJvmEnvironment>(org.gradle.api.attributes.java.TargetJvmEnvironment.ANDROID),
+        )
+    }
+}
+
 dependencies {
     // Same Ktor/serialization line as the BitChord chassis (app module) so the
     // versions stay in lockstep when the KMP tree is upgraded.
     implementation("io.ktor:ktor-client-core:3.5.2")
-    // OkHttp engine over CIO: h2 support and a mainstream TLS fingerprint -
+    // OkHttp engine over CIO: h2 support and a mainstream TLS fingerprint —
     // the lyric host serves empty bodies to JVM CIO clients.
     implementation("io.ktor:ktor-client-okhttp:3.5.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
