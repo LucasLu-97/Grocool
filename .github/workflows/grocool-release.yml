@@ -2,10 +2,23 @@ name: Release Build
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag / version to publish (e.g. v0.1.0)'
+        required: false
+        default: 'v0.1.0'
+      prerelease:
+        description: 'Mark as pre-release (测试版)'
+        required: false
+        default: 'true'
 
-# A signed prod-release APK, on demand: R8 + resource shrinking + per-ABI
-# splits, the build users actually sideload. The debug CI build answers
-# "does it compile"; this answers "what does it weigh".
+permissions:
+  contents: write
+
+# Build the signed prod release and publish it as a GitHub Release in one
+# go: the APKs go runner -> release without ever crossing the slow artifact
+# CDN. Re-running with the same tag replaces the release (and its tag), so a
+# test build can be re-cut cleanly.
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,15 +41,67 @@ jobs:
         run: |
           echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > grocool-release.jks
           printf 'storeFile=grocool-release.jks\nstorePassword=%s\nkeyAlias=androiddebugkey\nkeyPassword=%s\n' "$KS_PASS" "$KS_PASS" > keystore.properties
-          ls -la grocool-release.jks keystore.properties
 
       - name: Assemble signed prod release
         run: ./gradlew assembleProdRelease -Pbitchord.bundleWear=false
 
-      - name: List APK outputs
-        run: ls -la app/build/outputs/apk/prod/release/
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GROCOOL_GH_PAT }}
+          TAG: ${{ inputs.tag }}
+          IS_PRE: ${{ inputs.prerelease }}
+        run: |
+          cd app/build/outputs/apk/prod/release/
+          mv app-prod-arm64-v8a-release.apk "Grocool-$TAG-arm64-v8a.apk"
+          mv app-prod-armeabi-v7a-release.apk "Grocool-$TAG-armeabi-v7a.apk"
+          mv app-prod-x86_64-release.apk "Grocool-$TAG-x86_64.apk"
+          mv app-prod-universal-release.apk "Grocool-$TAG-universal.apk"
+          PRE_FLAG=""
+          if [ "$IS_PRE" = "true" ]; then PRE_FLAG="--prerelease"; fi
+          # A re-run with the same tag replaces the release cleanly.
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          NOTES=$(cat <<'EOF'
+          **Grocool 首个真机测试版** —— BitChord 车架 + 酷狗概念版核心，GPL-3.0 开源。
 
-      - name: Upload release APKs
+          ## 安装
+          - **绝大多数现代手机**：`arm64-v8a`（约 83MB）
+          - 不确定架构：`universal`（约 184MB）
+
+          ## 本版内容
+          - 酷狗概念版**扫码登录**：设置 → 数据源 → 点"酷狗概念版"行
+          - 概念版 **VIP 全音质取流**：128 / 320 / FLAC 按网络档位自适应
+          - 搜索、队列、播放、歌词等完整车架体验
+
+          ## 已知事项
+          - 内部 versionName 沿用车架 1.9，Grocool 自身版本以 Release tag 为准
+          - YTM 及境外集成（Discord/Spotify/LastFM 等）下一切除
+          - 逐字歌词链路待真机验证
+
+          ## 下载校验
+          下方每个 APK 旁的 SHA256 请在下载后核对（经加速镜像下载时务必校验）。
+          EOF
+          )
+          # The heredoc above is indented for YAML; strip the common leading spaces.
+          NOTES=$(printf '%s\n' "$NOTES" | sed 's/^[[:space:]]*//')
+          gh release create "$TAG" \
+            --title "Grocool $TAG（测试版）" \
+            --notes "$NOTES" \
+            $PRE_FLAG \
+            "Grocool-$TAG-arm64-v8a.apk" \
+            "Grocool-$TAG-armeabi-v7a.apk" \
+            "Grocool-$TAG-x86_64.apk" \
+            "Grocool-$TAG-universal.apk"
+
+      - name: Generate SHA-256 checksums
+        env:
+          GH_TOKEN: ${{ secrets.GROCOOL_GH_PAT }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          cd app/build/outputs/apk/prod/release/
+          sha256sum "Grocool-$TAG"*.apk > "SHA256SUMS-$TAG.txt"
+          gh release upload "$TAG" "SHA256SUMS-$TAG.txt" --clobber
+
+      - name: Upload CI artifact (debug reference)
         uses: actions/upload-artifact@v4
         with:
           name: grocool-prod-release-signed
