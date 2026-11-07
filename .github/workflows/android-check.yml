@@ -11,6 +11,9 @@ on:
       - 'gradle/**'
   workflow_dispatch:
 
+# No Gradle caching on purpose: the cross-round build cache kept producing
+# inconsistent Kotlin compile state (the same jar's members resolved
+# differently run to run), which made real errors undiagnosable.
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,10 +26,12 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Clean build caches
+        run: ./gradlew clean
 
       - name: Diagnose kugou on the app compile classpath
         run: |
