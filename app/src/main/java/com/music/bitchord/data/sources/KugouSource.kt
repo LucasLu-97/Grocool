@@ -69,7 +69,7 @@ class KugouSource(
         val data = (response.body as? JsonObject)?.get("data") as? JsonObject
         val sections = data?.get("lists") as? JsonArray
         val songSection = sections?.firstOrNull { section ->
-            ((section as? JsonObject)?.get("type") as? JsonPrimitive)?.content() == "song"
+            ((section as? JsonObject)?.get("type") as? JsonPrimitive)?.content == "song"
         }
         val songs = (songSection as? JsonObject)?.get("lists") as? JsonArray ?: return emptyList()
 
@@ -119,10 +119,10 @@ class KugouSource(
         }.getOrNull() ?: return null
 
         val url = (((response.body as? JsonObject)?.get("url") as? JsonArray)
-            ?.firstOrNull() as? JsonPrimitive)?.content()
+            ?.firstOrNull() as? JsonPrimitive)?.content
             .takeUnless { it.isNullOrBlank() } ?: return null
         val durationSec = ((response.body as? JsonObject)?.get("timeLen") as? JsonPrimitive)
-            ?.content()?.toIntOrNull()
+            ?.content?.toIntOrNull()
 
         TrackLog.d(TAG, "✓ KuGou stream q=$quality ${url.take(80)}")
         return SourceStream(
