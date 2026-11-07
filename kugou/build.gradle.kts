@@ -40,5 +40,5 @@ dependencies {
 
 /** Prints the runtime classpath for local tooling. */
 tasks.register("printClasspath") {
-    doLast { println(android.sourceSets["main"].runtimeClasspath.asPath) }
+    doLast { println(configurations.getByName("prodDebugRuntimeClasspath").asPath) }
 }
